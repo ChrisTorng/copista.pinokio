@@ -5,7 +5,7 @@ const mode='copista';
 const repo=mode==='dettato'?'https://github.com/kobimusic/dettato.git':'https://github.com/kobimusic/copisteria.git';
 const py=path.join(base,'.venv',process.platform==='win32'?'Scripts/python.exe':'bin/python');
 function run(command,args,opts={}){console.log('>',command,args.join(' '));const p=cp.spawnSync(command,args,{stdio:'inherit',...opts});if(p.error)throw p.error;if(p.status!==0)throw Error(command+' failed ('+p.status+')')}
-function has(command){let p=cp.spawnSync(command,['--version'],{stdio:'ignore'});return !p.error&&p.status===0}
+function has(command,args=['--version']){const p=cp.spawnSync(command,args,{stdio:'ignore'});return !p.error&&p.status===0;}
 function setup(){
  if(!['linux','win32'].includes(process.platform)||process.arch!=='x64')throw Error('Windows/Linux x64 only');
  if(!has('uv')||!has('git'))throw Error('Requires Pinokio AI bundle with uv and git');
@@ -14,16 +14,29 @@ function setup(){
  else run('git',['-C',source,'pull','--ff-only']);
  run('uv',['python','install','3.12']);
  if(!fs.existsSync(py))run('uv',['venv','--python','3.12',path.join(base,'.venv')]);
- run('uv',['pip','install','--python',py,'-e',source,'fastapi','uvicorn','python-multipart',...(mode==='copista'?['huggingface_hub','verovio']:[])]);
+ const pipArgs=['pip','install','--python',py,'-e',source,'fastapi','uvicorn','python-multipart','huggingface_hub','verovio'];
+ const windows=process.platform==='win32';
+ const nvidia=windows&&has('nvidia-smi',['-L']);
+ if(windows){
+  pipArgs.push('--torch-backend','auto');
+  // Replace an existing CPU wheel when installing again on an NVIDIA PC.
+  if(nvidia){
+   const installed=cp.spawnSync(py,['-c','import torch; print(torch.version.cuda)'],{encoding:'utf8'});
+   if(installed.status===0&&installed.stdout.trim()==='None'){
+    pipArgs.push('--reinstall-package','torch','--reinstall-package','torchvision');
+   }
+  }
+ }
+ run('uv',pipArgs);
  if(mode==='copista'){
   const dir=path.join(source,'models');
   for(const id of ['copista-28m','copista-2m']){
    const code="from huggingface_hub import snapshot_download; snapshot_download(repo_id="+JSON.stringify('kobimusic/'+id)+",local_dir="+JSON.stringify(dir)+",allow_patterns=['*.pt'])";
    run(py,['-c',code],{cwd:source});
   }
-  if(!has('pdftoppm'))console.warn('PDF needs poppler-utils: sudo apt install poppler-utils');
+  if(!has('pdftoppm',['-v'])||!has('pdfimages',['-v']))console.warn(windows?'PDF requires Poppler: winget install -e --id oschwartz10612.Poppler. Restart Pinokio after installation.':'PDF requires Poppler: sudo apt install poppler-utils');
  }else if(!has('ffmpeg'))console.warn('Some audio codecs need ffmpeg');
- run(py,['-c',"import torch;print('PyTorch',torch.__version__,'CUDA',torch.cuda.is_available())"]);
+ run(py,['-c',"import torch; available = torch.cuda.is_available(); print('PyTorch', torch.__version__, 'CUDA', available, '|', torch.cuda.get_device_name(0) if available else 'CPU')"]);
  fs.writeFileSync(path.join(base,'.installed'),new Date().toISOString());
 }
 function start(){

@@ -13,9 +13,9 @@ The app clones upstream under `app/source` and creates a Python 3.12 virtual env
 
 ## Requirements
 
-- Designed for Ubuntu 26.04 x64 / NVIDIA RTX 4090. Windows x64 scripting is present but not validated.
-- Pinokio AI bundle providing uv, Git and a compatible Python/PyTorch/CUDA environment.
-- **For PDF input install Poppler:** `sudo apt install poppler-utils`.
+- Windows 11 x64 with an NVIDIA CUDA-capable GPU (including the RTX 3070 Laptop GPU), or Ubuntu 26.04 x64. CPU inference is also available.
+- Pinokio AI bundle providing **uv**, Git and Python 3.12 provisioning. On Windows, the installer uses uv to select matching PyTorch and torchvision builds based on the installed GPU driver. For NVIDIA, check the Install log for `CUDA True` and your GPU name.
+- **PDF input requires Poppler** (`pdftoppm` and `pdfimages` on PATH). On Windows use `winget install -e --id oschwartz10612.Poppler` in PowerShell and restart Pinokio. On Ubuntu use `sudo apt install poppler-utils`. For PNG or JPEG input, Poppler is optional.
 - Serves at `http://127.0.0.1:50882` (loopback only). Port must be unused.
 - 28M has better recognition quality in the upstream benchmark; 2M is lower-resource.
 - This is for **standard staff notation**, not direct numbered notation (簡譜) recognition.
@@ -25,7 +25,7 @@ The app clones upstream under `app/source` and creates a Python 3.12 virtual env
 
 - Upstream CLI arguments and model paths reviewed against Copisteria code.
 - GitHub Actions checks JavaScript and Python syntax.
-- Live installation, model downloads and GPU processing on the target Ubuntu 4090 **remain untested**.
+- Physical GPU inference on a Windows RTX 3070 Laptop GPU or Ubuntu RTX 4090 still needs a hardware test.
 
 Upstream: https://github.com/kobimusic/copisteria
 Models: https://huggingface.co/collections/kobimusic/copista-6ac3033f1a779b0c63ad41a9
